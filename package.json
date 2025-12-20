@@ -1,5 +1,5 @@
 {
-	"name": "mavrick-mobile-gateway",
+	"name": "mobile-enrichment-gateway",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
