@@ -1,194 +1,205 @@
-# Mock Enrichment Provider  
-_Serverless Mock Upstream API using Cloudflare Workers_
+# Mobile Enrichment Gateway
 
-## 📌 Overview
-
-**Mock Enrichment Provider** is a lightweight, serverless Cloudflare Workers project that simulates a real-world mobile enrichment service.
-
-It acts as an **upstream microservice** for the **Mobile-Enrichment-Gateway** project, allowing developers to test, validate, and demonstrate **API Gateway concepts** without relying on an actual third-party provider.
-
-This project intentionally keeps logic simple while preserving **realistic architecture and interaction patterns** found in production systems.
+A **Cloudflare Workers** based API Gateway that acts as a single entry point for mobile enrichment requests. It interacts with an upstream provider (e.g., Mock Enrichment Provider) to resolve mobile numbers, confidence scores, and other metadata, demonstrating a real-world API Gateway pattern in a serverless architecture.
 
 ---
 
-## 🎯 Purpose of This Project
+## Table of Contents
 
-This project is designed to:
-
-- Simulate a **third-party or internal enrichment API**
-- Enable **end-to-end testing** of the Mobile-Enrichment-Gateway
-- Demonstrate how an API Gateway communicates with upstream services
-- Avoid dependency on local mock servers
-- Ensure compatibility with **Cloudflare-hosted gateway deployments**
-
-> Since the Mobile-Enrichment-Gateway is deployed on Cloudflare Workers, it **cannot reliably interact with local services**.  
-> Therefore, this mock provider is also deployed on Cloudflare to behave like a **real online upstream API**.
+- [Overview](#overview)  
+- [Features](#features)  
+- [Architecture](#architecture)  
+- [Setup & Deployment](#setup--deployment)  
+- [API Usage](#api-usage)  
+- [Sequence Diagrams](#sequence-diagrams)  
+- [Contributing](#contributing)  
+- [License](#license)  
 
 ---
 
-## 🧱 Architecture Role
+## Overview
 
-In the overall system, this project represents:
+The **Mobile Enrichment Gateway** provides a centralized interface to access mobile enrichment services. It allows:
 
-- A **paid third-party enrichment API**
-- An **external microservice owned by another team**
-- A **legacy or partner system**
-- A **remote cloud-hosted service**
+- Rate limiting per client API key  
+- Request validation and input sanitization  
+- Upstream provider selection and data enrichment  
+- Idempotency handling for repeated requests  
 
-```
+This gateway demonstrates **real-world API Gateway responsibilities**:
 
-Client → Mobile-Enrichment-Gateway → Mock-Enrichment-Provider
+- Request routing  
+- Authentication and authorization  
+- Rate limiting and throttling  
+- Error handling and response mapping  
+- Logging and monitoring  
 
-```
-
-The gateway calls this service, processes the response, sanitizes it, and returns a controlled output to clients.
-
----
-
-## 🚀 Features
-
-- Cloudflare Workers based (serverless, globally distributed)
-- Accepts POST requests
-- Returns simulated enrichment data:
-  - Mobile number
-  - Confidence score
-  - Request ID
-- Stateless and fast
-- Ideal for integration testing
+The gateway interacts with an upstream microservice, e.g., the **Mock Enrichment Provider**, which can be hosted elsewhere or simulated using Cloudflare Workers.
 
 ---
 
-## 📡 API Behavior
+## Features
 
-### Endpoint
-```
+- **Single Entry Point:** All clients call this gateway instead of backend services directly.  
+- **Authentication:** API key-based client validation.  
+- **Rate Limiting:** Prevents abuse by limiting requests per client per minute.  
+- **Input Validation:** Ensures required fields are present and correctly formatted.  
+- **Upstream Integration:** Calls enrichment providers and returns sanitized responses.  
+- **Idempotency:** Handles repeated requests gracefully using request IDs.  
+- **Cloudflare Worker Serverless Deployment:** Fully serverless and scalable.  
 
-POST /
+---
 
+## Architecture
+
+### Components
+
+1. **Mobile Enrichment Gateway (this project):** Handles requests from clients and enriches data.  
+2. **Mock Enrichment Provider:** Simulates a real third-party service or microservice for testing purposes.  
+3. **Client Applications:** Web apps, mobile apps, dashboards, or other services that consume the API.
+
+---
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Gateway
+    participant Provider
+
+    Client->>Gateway: POST /enrich {first_name, last_name, address}
+    Gateway->>Gateway: Validate API Key
+    Gateway->>Gateway: Apply Rate Limiting
+    Gateway->>Gateway: Validate Input
+    Gateway->>Provider: POST /provider {first_name, last_name, address}
+    Provider-->>Gateway: {mobile, confidence, request_id}
+    Gateway-->>Client: {mobile, confidence, request_id}
 ````
 
-### Request Body (JSON)
-```json
-{
-  "first_name": "John",
-  "last_name": "Doe",
-  "address": "Lahore, Pakistan"
-}
-````
-
-### Sample Response
-
-```json
-{
-  "mobile": "+923001234567",
-  "confidence": 0.85,
-  "request_id": "c1a4f8c4-7b0e-4e5c-bb64-9e8b12c1d912"
-}
-```
-
 ---
 
-## 🧩 Code Example (index.ts)
+## Setup & Deployment
 
-```ts
-export default {
-  async fetch(request: Request): Promise<Response> {
-    if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
-    }
+### Prerequisites
 
-    const body = await request.json();
+* Node.js >= 20.x
+* NPM or Yarn
+* Cloudflare account with Workers enabled
 
-    return Response.json({
-      mobile: "+92" + Math.floor(3000000000 + Math.random() * 999999999),
-      confidence: 0.85,
-      request_id: crypto.randomUUID(),
-    });
-  }
-};
-```
-
----
-
-## 🛠️ Development & Deployment
-
-### Install Wrangler
+### Install Wrangler (Cloudflare CLI)
 
 ```bash
 npm install -g wrangler
 ```
 
-### Login to Cloudflare
+### Project Setup
 
 ```bash
-wrangler login
+git clone https://github.com/yourusername/mobile-enrichment-gateway.git
+cd mobile-enrichment-gateway
+npm install
 ```
 
-### Run Locally
+### Local Development
 
 ```bash
 npx wrangler dev
 ```
 
-### Deploy to Cloudflare
+This starts the gateway locally at `http://127.0.0.1:8787` for testing.
+
+### Deployment
 
 ```bash
 npx wrangler deploy
 ```
 
-After deployment, Cloudflare assigns a public URL ending with:
+This will deploy your gateway to your Cloudflare account.
 
+---
+
+## API Usage
+
+### Endpoint
+
+`POST /enrich`
+
+### Request Headers
+
+```http
+x-api-key: <your_api_key>
+Content-Type: application/json
 ```
-workers.dev
+
+### Request Body
+
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "address": "123 Street"
+}
 ```
 
-This is Cloudflare’s default **development subdomain**, even for production-ready deployments.
+### Response Body
+
+```json
+{
+  "mobile": "+923001234567",
+  "confidence": 0.88,
+  "request_id": "uuid-generated",
+  "receivedClientData": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "address": "123 Street"
+  }
+}
+```
 
 ---
 
-## 🔗 Integration with Mobile-Enrichment-Gateway
+## Sequence Diagram (Detailed Flow)
 
-This project is **specifically used to test and validate**:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Gateway
+    participant Provider
 
-* Upstream service calling
-* Authorization header forwarding
-* Error handling
-* Response sanitization
-* Gateway-to-microservice communication
-
-The Mobile-Enrichment-Gateway treats this service exactly like a **real external provider**.
-
----
-
-## 📦 Tech Stack
-
-* Cloudflare Workers
-* TypeScript
-* Wrangler CLI
-* Serverless Architecture
+    Client->>Gateway: POST /enrich {payload}
+    Gateway->>Gateway: Check Idempotency
+    Gateway->>Gateway: Validate API Key
+    Gateway->>Gateway: Rate Limiting
+    Gateway->>Gateway: Validate Input
+    Gateway->>Provider: POST {payload}
+    Provider-->>Gateway: {enriched_data}
+    Gateway-->>Client: {enriched_data}
+```
 
 ---
 
-## 🧠 Key Takeaway
+## Contributing
 
-This mock provider is **not just a dummy API** — it is a **critical architectural component** that enables realistic API Gateway demonstrations while remaining:
+Contributions are welcome!
 
-* Cost-free
-* Fast
-* Cloud-native
-* Production-aligned
+1. Fork the repository
+2. Create a new branch for your feature or bugfix
+3. Submit a pull request
 
 ---
 
-## 📄 License
+## License
 
 MIT License
-Free to use for learning, demos, and experimentation.
+
+```
+
+This file:  
+
+- Explains **purpose and features**  
+- Gives **setup instructions**  
+- Shows **sequence diagrams** for client → gateway → provider  
+- Details API usage with request and response examples  
 
 ---
-
-## 👤 Author
-
-Shafqat Altaf
-Serverless • Microservices • API Gateway Architectures
-
