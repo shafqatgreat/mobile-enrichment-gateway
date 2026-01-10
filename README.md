@@ -189,12 +189,6 @@ Contributions are welcome!
 
 ---
 
-## License
-
-MIT License
-
-```
-
 This file:  
 
 - Explains **purpose and features**  
@@ -204,7 +198,7 @@ This file:
 
 ---
 
-## 📄 Youtube Tutorial
+## Youtube Tutorial
 
 CodingMavrick:
 How to Building an API Gateway (Cloud Native)  on CloudFlare [https://youtu.be/D4Lt18qYkjc]
